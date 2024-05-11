@@ -8,6 +8,68 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.stattools import acf
 
+
+# Load your data
+# data = pd.read_csv('your_data.csv')
+df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
+df = df.T
+
+
+# Remove dollar signs and commas
+df[1] = df[1].replace('[\$,]', '', regex=True)
+
+# Replace '-' or any other placeholders for missing data with NaN
+df[1] = df[1].replace('-', pd.NA)
+
+df[1] = pd.to_numeric(df[1], errors='coerce')
+
+df[0] = pd.to_datetime(df[0], errors='coerce')
+
+time_series_data = pd.DataFrame({
+    "Dates":df[0],
+    "Values":df[1]
+})
+
+
+#split data
+# Split data for features and target
+X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
+
+# Initialize the scaler
+scaler = MinMaxScaler()
+
+# Assuming 'X' is your DataFrame
+for column in X.columns:
+    X[column] = X[column].replace('[\$,]', '', regex=True)
+    X[column] = X[column].replace('-', pd.NA)
+    X[column] = pd.to_numeric(X[column], errors='coerce')
+    X[column].fillna(0, inplace=True)
+
+# Apply Min-Max scaling
+# It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
+X[X.columns] = scaler.fit_transform(X[X.columns])
+
+y = df[df.columns[1]]  # Target variable, ensure this is the correct column
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+X_test.fillna(0, inplace=True)
+y_test.fillna(0, inplace=True)
+
+print("xtrain")
+print(X_train)
+
+print("xtest")
+print(X_test)
+
+print("ytrain")
+print(y_train)
+
+print("ytest")
+print(y_test)
+
+
 #differencing
 result = adfuller(df.value,dropna())
 plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
