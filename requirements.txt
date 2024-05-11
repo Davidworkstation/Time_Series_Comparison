@@ -10,7 +10,7 @@ statsmodels.tsa.stattools
 autogluon.tabular
 sklearn.metrics
 torch
-chronos
+git+https://github.com/amazon-science/chronos-forecasting.git
 lightgbm
 sklearn.model_selection
 sklearn.metrics
