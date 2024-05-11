@@ -45,7 +45,6 @@ def cointegration_test(df, alpha = 0.05):
     for col, trace, cvt in zip(df.columns, traces, cvts):
         print(adjust(col), ':: ', adjust(round(trace,2), 9), ">", adjust(cvt, 8), ' => ', trace > cvt)
         
-        
 cointegration_test(df)
 
 #split training and test set
