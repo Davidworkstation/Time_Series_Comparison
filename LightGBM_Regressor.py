@@ -105,7 +105,7 @@ def objective(trial):
 
 # Create and optimize the study
 study = optuna.create_study(direction='minimize', study_name='Time_Series_Forecasting_JPmorg', storage=mysqldb, load_if_exists=True)
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=500)
 
 # Display best parameters
 print("Number of finished trials: ", len(study.trials))

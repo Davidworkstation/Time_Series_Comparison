@@ -7,6 +7,7 @@ from pmdarima.arima.utils import ndiffs
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.stattools import acf
+from sklearn.preprocessing import MinMaxScaler
 
 
 # Load your data

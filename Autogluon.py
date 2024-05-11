@@ -1,6 +1,8 @@
 from autogluon.tabular import TabularPredictor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 
 # Load your data
 
@@ -64,25 +66,19 @@ print(y_train)
 print("ytest")
 print(y_test)
 
+
+# Prepare train_data and test_data for AutoGluon
+train_data = pd.concat([X_train, y_train.rename('target')], axis=1)
+test_data = pd.concat([X_test, y_test.rename('target')], axis=1)
+
+
 #start
-data['date_column'] = pd.to_datetime(data['date_column'])
-data.set_index('date_column', inplace=True)
-
-# Assuming 'target' is the column you want to forecast
-y = data['target']
-X = data.drop(columns=['target'])
-
 forecast_horizon = 7  # for example, forecast 7 periods ahead
-
-split_time = '2023-01-01'  # Adjust this to your dataset's appropriate split point
-train_data = data[data.index < split_time]
-test_data = data[data.index >= split_time]
 
 predictor = TabularPredictor(label='target', path='autogluon_forecasting_models').fit(train_data)
 predictions = predictor.predict(test_data.drop(columns=['target']))
 
 #eval
-
 mae = mean_absolute_error(test_data['target'], predictions)
 rmse = mean_squared_error(test_data['target'], predictions, squared=False)
 
