@@ -5,13 +5,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pmdarima.arima.utils import ndiffs
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+import warnings
+
+warnings.filterwarnings("ignore", message="No frequency information was provided, so inferred frequency Q-DEC will be used.")
+warnings.filterwarnings("ignore", message="is_categorical_dtype is deprecated and will be removed in a future version.*")
+warnings.filterwarnings("ignore", message="use_inf_as_na option is deprecated and will be removed in a future version.*")
 
 
 # Load your data
 # data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
+df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
 df = df.T
 
 
@@ -30,7 +37,6 @@ time_series_data = pd.DataFrame({
     "Values":df[1]
 })
 
-
 #split data
 # Split data for features and target
 X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
@@ -48,20 +54,36 @@ for column in X.columns:
 # Apply Min-Max scaling
 # It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
 X[X.columns] = scaler.fit_transform(X[X.columns])
+indices_to_drop = df.index[:3]
+X = X.drop(X.index[:3])
+
 
 y = df[df.columns[1]]  # Target variable, ensure this is the correct column
+y.index = df[0]
+indices_to_drop = df.index[:3]
+y = y.drop(y.index[:3])
+y = y.iloc[::-1].reset_index(drop=False)
+yindex, y = y[0], y[1]
+y.index = yindex
+print(y.index)
+
 
 # Split data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+split_point = int(len(y) * 0.8)
+X_train, X_test = X[:split_point], X[split_point:]
+y_train, y_test = y[:split_point], y[split_point:]
 
 X_test.fillna(0, inplace=True)
 y_test.fillna(0, inplace=True)
+y_train.fillna(0, inplace=True)
+y.fillna(0, inplace=True)
 
 print("xtrain")
 print(X_train)
 
 print("xtest")
 print(X_test)
+
 
 print("ytrain")
 print(y_train)
@@ -71,31 +93,52 @@ print(y_test)
 
 
 #differencing
-result = adfuller(df.value,dropna())
 plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
 
-# Import data
-df = pd.read_csv('', names=['value'], header=0)
+# Perform ADF test
+result = adfuller(y_train)
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+    print('\t%s: %.3f' % (key, value))
 
 # Original Series
-fig, axes = plt.subplots(3, 2, sharex=True)
-axes[0, 0].plot(df.value); axes[0, 0].set_title('Original Series')
-plot_acf(df.value, ax=axes[0, 1])
+fig, axes = plt.subplots(3, 2, sharex='col')  # Share x-axis only within columns
 
-# 1st Differencing
-axes[1, 0].plot(df.value.diff()); axes[1, 0].set_title('1st Order Differencing')
-plot_acf(df.value.diff().dropna(), ax=axes[1, 1])
+# Plotting time series data with specific x-axis limits
+min_date = y.index.min()
+max_date = y.index.max()
 
-# 2nd Differencing
-axes[2, 0].plot(df.value.diff().diff()); axes[2, 0].set_title('2nd Order Differencing')
-plot_acf(df.value.diff().diff().dropna(), ax=axes[2, 1])
+# Original Series
+axes[0, 0].plot(y.index, y); 
+axes[0, 0].set_title('Original Series')
+axes[0, 0].set_xlim(min_date, max_date)  # Set x-limits for the time series plot
 
+plot_acf(y, ax=axes[0, 1])  # Autocorrelation plot without x-limits
+
+# First Order Differencing
+y_first_diff = y.diff().dropna()
+axes[1, 0].plot(y_first_diff.index, y_first_diff); 
+axes[1, 0].set_title('1st Order Differencing')
+axes[1, 0].set_xlim(min_date, max_date)  # Set x-limits for the time series plot
+
+plot_acf(y_first_diff, ax=axes[1, 1])  # Autocorrelation plot without x-limits
+
+# Second Order Differencing
+y_second_diff = y.diff().diff().dropna()
+axes[2, 0].plot(y_second_diff.index, y_second_diff); 
+axes[2, 0].set_title('2nd Order Differencing')
+axes[2, 0].set_xlim(min_date, max_date)  # Set x-limits for the time series plot
+
+plot_acf(y_second_diff, ax=axes[2, 1])  # Autocorrelation plot without x-limits
+
+plt.tight_layout()  # Adjust layout to prevent overlap
 plt.show()
 
+df = y
 
-y = df.value
-
-## Adf Test
+# Adf Test
 ndiffs(y, test='adf')  # 2
 
 # KPSS test
@@ -107,31 +150,25 @@ ndiffs(y, test='pp')  # 2
 # PACF plot of 1st differenced series
 plt.rcParams.update({'figure.figsize':(9,3), 'figure.dpi':120})
 
-fig, axes = plt.subplots(1, 2, sharex=True)
-axes[0].plot(df.value.diff()); axes[0].set_title('1st Differencing')
-axes[1].set(ylim=(0,5))
-plot_pacf(df.value.diff().dropna(), ax=axes[1])
 
-plt.show()
+fig, axes = plt.subplots(1, 2)
+axes[0].plot(y.diff()); axes[0].set_title('1st Differencing')
+axes[0].set_xlim(min_date, max_date)
 
+plot_pacf(y.diff().dropna(), ax=axes[1])
+axes[1].set_xlim(0,17.5)
 
-
-plt.rcParams.update({'figure.figsize':(9,3), 'figure.dpi':120})
-fig, axes = plt.subplots(1, 2, sharex=True)
-axes[0].plot(df.value.diff()); axes[0].set_title('1st Differencing')
-axes[1].set(ylim=(0,1.2))
-plot_acf(df.value.diff().dropna(), ax=axes[1])
 plt.show()
 
 
 # 1,1,2 ARIMA Model
-model = ARIMA(df.value, order=(1,1,2))
-model_fit = model.fit(disp=0)
+model = ARIMA(df, order=(1,1,2))
+model_fit = model.fit()
 print(model_fit.summary())
 
 # 1,1,1 ARIMA Model
-model = ARIMA(df.value, order=(1,1,1))
-model_fit = model.fit(disp=0)
+model = ARIMA(df, order=(1,1,1))
+model_fit = model.fit()
 print(model_fit.summary())
 
 # Plot residual errors
@@ -141,91 +178,151 @@ residuals.plot(title="Residuals", ax=ax[0])
 residuals.plot(kind='kde', title='Density', ax=ax[1])
 plt.show()
 
-# Actual vs Fitted
-model_fit.plot_predict(dynamic=False)
+# Get predictions starting from the start of the series to the end
+pred = model_fit.get_prediction(start=df.index[0], end=df.index[-1], dynamic=False)
+pred_conf = pred.conf_int()
+
+# Plot the series and the forecasted values with confidence intervals
+plt.figure(figsize=(12, 6))
+plt.plot(df.index, df, label='Observed', color='blue')
+plt.plot(pred.predicted_mean.index, pred.predicted_mean, label='Forecast', color='red')
+
+# Plot the confidence intervals
+plt.fill_between(pred_conf.index, pred_conf.iloc[:, 0], pred_conf.iloc[:, 1], color='pink')
+plt.legend()
 plt.show()
 
-#find optimal arima 
 # Create Training and Test
-train = df.value[:85]
-test = df.value[85:]
+train = y_train
+test = y_test
 
-# Build Model
-# model = ARIMA(train, order=(3,2,1))  
-model = ARIMA(train, order=(1, 1, 1))  
-fitted = model.fit(disp=-1)  
+print(test.index)
+print(test)
 
-# Forecast
-fc, se, conf = fitted.forecast(15, alpha=0.05)  # 95% conf
-
-# Make as pandas series
-fc_series = pd.Series(fc, index=test.index)
-lower_series = pd.Series(conf[:, 0], index=test.index)
-upper_series = pd.Series(conf[:, 1], index=test.index)
-
-# Plot
-plt.figure(figsize=(12,5), dpi=100)
-plt.plot(train, label='training')
-plt.plot(test, label='actual')
-plt.plot(fc_series, label='forecast')
-plt.fill_between(lower_series.index, lower_series, upper_series, 
-                 color='k', alpha=.15)
-plt.title('Forecast vs Actuals')
-plt.legend(loc='upper left', fontsize=8)
-plt.show()
-
-# Build Model
-model = ARIMA(train, order=(3, 2, 1))  
-fitted = model.fit(disp=-1)  
-print(fitted.summary())
-
-# Forecast
-fc, se, conf = fitted.forecast(15, alpha=0.05)  # 95% conf
-
-# Make as pandas series
-fc_series = pd.Series(fc, index=test.index)
-lower_series = pd.Series(conf[:, 0], index=test.index)
-upper_series = pd.Series(conf[:, 1], index=test.index)
-
-# Plot
-plt.figure(figsize=(12,5), dpi=100)
-plt.plot(train, label='training')
-plt.plot(test, label='actual')
-plt.plot(fc_series, label='forecast')
-plt.fill_between(lower_series.index, lower_series, upper_series, 
-                 color='k', alpha=.15)
-plt.title('Forecast vs Actuals')
-plt.legend(loc='upper left', fontsize=8)
-plt.show()
-
-# Accuracy metrics
 def forecast_accuracy(forecast, actual):
-    mape = np.mean(np.abs(forecast - actual)/np.abs(actual))  # MAPE
-    me = np.mean(forecast - actual)             # ME
-    mae = np.mean(np.abs(forecast - actual))    # MAE
-    mpe = np.mean((forecast - actual)/actual)   # MPE
-    rmse = np.mean((forecast - actual)**2)**.5  # RMSE
-    corr = np.corrcoef(forecast, actual)[0,1]   # corr
-    mins = np.amin(np.hstack([forecast[:,None], 
-                              actual[:,None]]), axis=1)
-    maxs = np.amax(np.hstack([forecast[:,None], 
-                              actual[:,None]]), axis=1)
-    minmax = 1 - np.mean(mins/maxs)             # minmax
-    acf1 = acf(fc-test)[1]                      # ACF1
-    return({'mape':mape, 'me':me, 'mae': mae, 
-            'mpe': mpe, 'rmse':rmse, 'acf1':acf1, 
-            'corr':corr, 'minmax':minmax})
+    mape = np.nanmean(np.abs(forecast - actual) / np.abs(actual))  # MAPE
+    me = np.nanmean(forecast - actual)  # ME
+    mae = np.nanmean(np.abs(forecast - actual))  # MAE
+    mpe = np.nanmean((forecast - actual) / actual)  # MPE
+    rmse = np.sqrt(np.mean((forecast - actual)**2))  # RMSE
+    corr = np.corrcoef(forecast, actual)[0, 1]  # Correlation
+    mins = np.minimum(forecast, actual)
+    maxs = np.maximum(forecast, actual)
+    minmax = 1 - np.nanmean(mins / maxs)  # Min-Max Error
+    acf1 = np.corrcoef(forecast[:-1], forecast[1:])[0, 1]  # ACF1 of forecast
 
-forecast_accuracy(fc, test.values)
+    return {
+        'mape': mape,
+        'me': me,
+        'mae': mae,
+        'mpe': mpe,
+        'rmse': rmse,
+        'acf1': acf1,
+        'corr': corr,
+        'minmax': minmax
+    }
 
-#> {'mape': 0.02250131357314834,
-#>  'me': 3.230783108990054,
-#>  'mae': 4.548322194530069,
-#>  'mpe': 0.016421001932706705,
-#>  'rmse': 6.373238534601827,
-#>  'acf1': 0.5105506325288692,
-#>  'corr': 0.9674576513924394,
-#>  'minmax': 0.02163154777672227}
+def evaluate_arima_model(train, test, arima_order, forecast_steps, fig=False):
+    model = ARIMA(train, order=arima_order)
+    fitted = model.fit()
+    
+    min_date_new = train.index.min()
+    max_date_new = test.index.max()
+    
+    forecast_result = fitted.get_forecast(steps=forecast_steps)
+    fc_series = forecast_result.predicted_mean
+    conf = forecast_result.conf_int()
+    
+    lower_series = pd.Series(conf.iloc[:, 0], index=test.index)
+    upper_series = pd.Series(conf.iloc[:, 1], index=test.index)
+    
+    figure = plt.figure(figsize=(12, 5), dpi=100)
+    sns.lineplot(x=train.index,y=train.values, label='Training', linestyle='--')
+    sns.lineplot(x=test.index,y=test.values, label='Actual', marker='o') 
+    sns.lineplot(fc_series, label='Forecast', color='red')
+    plt.fill_between(lower_series.index, lower_series, upper_series, color='k', alpha=.15)
+    plt.title(f'Forecast vs Actuals for ARIMA Order {arima_order}')
+    plt.legend(loc='upper left', fontsize=8)
+    plt.xlim(min_date_new, max_date_new) 
+    plt.show()
+    
+    # Ensure test and forecast series are aligned and have no NaN values
+    test_adjusted = test.replace(0, np.finfo(float).eps).ffill()
+    fc_series = fc_series.ffill()
+    
+    return forecast_accuracy(fc_series, test_adjusted)
+
+
+def evaluate_arima_model_subplots(train, test, arima_order, forecast_steps, ax=None):
+    model = ARIMA(train, order=arima_order)
+    fitted = model.fit()
+
+    forecast_result = fitted.get_forecast(steps=forecast_steps)
+    fc_series = forecast_result.predicted_mean
+    conf = forecast_result.conf_int()
+
+    lower_series = pd.Series(conf.iloc[:, 0], index=test.index)
+    upper_series = pd.Series(conf.iloc[:, 1], index=test.index)
+    
+    if ax is None:
+        ax = plt.gca()  # Gets the current active axis
+
+    sns.lineplot(x=train.index, y=train.values, label='Training', linestyle='--', ax=ax)
+    sns.lineplot(x=test.index, y=test.values, label='Actual', marker='o', ax=ax)
+    sns.lineplot(x=fc_series.index, y=fc_series.values, label='Forecast', color='red', ax=ax)
+    ax.fill_between(lower_series.index, lower_series, upper_series, color='k', alpha=.15)
+    ax.set_title(f'Forecast vs Actuals for ARIMA Order {arima_order}')
+    ax.set_ylim(-1000, 25000)
+    ax.legend(loc='upper left', fontsize=8)
+    ax.set_xlim(train.index.min(), test.index.max())
+
+    # Return the axis if needed outside the function
+    return ax
+    
+# Run evaluation for multiple configurations
+orders = [
+    (0, 0, 0),  # Naive model, mean of the series
+    (1, 0, 0),  # AR model with one lag
+    (0, 0, 1),  # MA model with one lag
+    (1, 1, 0),  # First-order differencing with one AR term
+    (0, 1, 1),  # First-order differencing with one MA term
+    (1, 1, 1),  # First-order differencing with one AR and one MA term
+    (0, 2, 1),  # Second-order differencing with one MA term
+    (1, 2, 0),  # AR model with second-order differencing
+    (1, 2, 1),  # Both AR and MA with second-order differencing
+    (2, 1, 0),  # Two AR terms with one differencing
+    (0, 1, 2),  # Two MA terms with one differencing
+    (2, 1, 2),  # More complex model with two AR and two MA terms
+    (3, 1, 0),  # Three AR terms
+    (0, 1, 3),  # Three MA terms
+    (3, 1, 1),  # Three AR terms and one MA term
+    (1, 1, 3),  # One AR term and three MA terms
+    (3, 1, 2),  # Three AR terms and two MA terms
+    (3, 2, 1)   # Three AR terms, two differencing steps, and one MA term
+]
+
+results = {}
+for order in orders:
+    results[order] = evaluate_arima_model(train, test, order, len(test))
+
+# Print the results
+for order, accuracy in results.items():
+    print(f"ARIMA Order {order}:")
+    print(accuracy)
+    
+fig, axes = plt.subplots(nrows=6, ncols=3, figsize=(30, 20))  # Adjust the size and layout as needed
+axes = axes.flatten()  # Flatten the array of axes if needed
+
+# Assuming you have multiple sets of train, test data or orders
+for i, order in enumerate(orders):
+    ax = axes[i]
+    evaluate_arima_model_subplots(train, test, order, forecast_steps = len(test), ax=ax)
+
+plt.tight_layout()
+plt.show()
+        
+    
+
 
 #references
 #https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
