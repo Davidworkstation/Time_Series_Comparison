@@ -13,16 +13,10 @@ pipeline = ChronosPipeline.from_pretrained(
     torch_dtype=torch.bfloat16,
 )
 
-<<<<<<< HEAD
 
 # Load your data
 # data = pd.read_csv('your_data.csv')
 df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
-=======
-# Load your data
-# data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
->>>>>>> 19afc427d85ebd6ef796a4cb911821da81d290c2
 df = df.T
 
 # Remove dollar signs and commas
@@ -40,7 +34,6 @@ time_series_data = pd.DataFrame({
     "Values":df[1]
 })
 
-<<<<<<< HEAD
 #split data
 # Split data for features and target
 X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
@@ -94,12 +87,6 @@ print(y_train)
 
 print("ytest")
 print(y_test)
-=======
-
-#split data
-# Split data for features and target
-X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
->>>>>>> 19afc427d85ebd6ef796a4cb911821da81d290c2
 
 # Initialize the scaler
 scaler = MinMaxScaler()
