@@ -41,7 +41,7 @@ time_series_data = pd.DataFrame({
 X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
 
 # Initialize the scaler
-scaler = MinMaxScaler()
+scaler = MinMaxScaler(feature_range=(0, 1))
 
 # Assuming 'X' is your DataFrame
 for column in X.columns:
@@ -77,8 +77,13 @@ y_test.fillna(0, inplace=True)
 y_train.fillna(0, inplace=True)
 y.fillna(0, inplace=True)
 
+X_train = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns, index=X_train.index)
+X_test = pd.DataFrame(scaler.fit_transform(X_test), columns=X_test.columns, index=X_test.index)
+
+
 print("xtrain")
 print(X_train)
+
 
 print("xtest")
 print(X_test)
@@ -98,10 +103,9 @@ def objective(trial):
         'boosting_type': 'gbdt',
         'objective': 'regression',
         'num_leaves': trial.suggest_int('num_leaves', 5, 100),
-        'max_depth': trial.suggest_int('max_depth', 2, 50),
+        'max_depth': -1,
         'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.99),
         'n_estimators': trial.suggest_int('n_estimators', 1000, 10000),
-        'subsample_for_bin': trial.suggest_int('subsample_for_bin', 1000, 10000),
         'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
         'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
         'subsample': trial.suggest_float('subsample', 0.25, 0.99),
@@ -109,25 +113,25 @@ def objective(trial):
         'colsample_bytree': trial.suggest_float('colsample_bytree', 0.2, 0.9),
         'reg_alpha': trial.suggest_float('reg_alpha', 3.5, 4.5),
         'reg_lambda': trial.suggest_float('reg_lambda', 0.9, 1.0),
-        'random_state': trial.suggest_categorical('random_state', [None, 42]),
         'n_jobs': -1
     }
     model = LGBMRegressor(**light_param)
-    tscv = TimeSeriesSplit(n_splits=5)
     mse_scorer = make_scorer(mean_squared_error, greater_is_better=False)
-    scores = cross_val_score(model, X_train, y_train, cv=tscv, scoring=mse_scorer)
+    scores = cross_val_score(model, X_train, y_train, scoring=mse_scorer)
     return np.nanmean(scores)
 
 # Create and optimize the study
 study = optuna.create_study(direction='minimize', study_name='Time_Series_Forecasting_JPmorg', storage=mysqldb, load_if_exists=True)
-study.optimize(objective, n_trials=70)
+study.optimize(objective, n_trials=50)
 
 # Display best parameters
 print("Number of finished trials: ", len(study.trials))
 print("Best trial:")
+
 trial = study.best_trial
 print("  Value: ", trial.value)
 print("  Params: ")
+
 for key, value in trial.params.items():
     print(f"    {key}: {value}")
 
@@ -139,12 +143,6 @@ best_model.fit(X_train, y_train)
 # Make predictions with the test set
 predictions = best_model.predict(X_test)
 
-plt.figure(figsize=(10, 5))
-plt.plot(predictions, label='Predicted Values', color='red')
-plt.title('Predicted Values Distribution')
-plt.legend()
-plt.show()
-
 print(y_test)
 print(predictions)
 
@@ -152,8 +150,10 @@ mse = mean_squared_error(y_test, predictions)
 print(f"Mean Squared Error: {mse}")
 
 plt.figure(figsize=(10, 5))
-plt.plot(y_test.index, y_test, label='Actual', color='blue')  
+plt.plot(y_train.index, y_train, label='Actual', color='blue')  
+plt.plot(y_test.index, y_test, label='Actual', color='green')  
 plt.plot(y_test.index, predictions, label='Predicted', color='red')
+plt.xlim(y_train.index.min(), y_test.index.max())
 plt.title('Model Predictions vs Actual Data')
 plt.xlabel('Date')
 plt.ylabel('Target Variable')
