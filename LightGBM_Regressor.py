@@ -16,6 +16,7 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 
 # data = pd.read_csv('your_data.csv')
+
 df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
 df = df.T
 
@@ -35,7 +36,6 @@ time_series_data = pd.DataFrame({
     "Values":df[1]
 })
 
-
 #split data
 # Split data for features and target
 X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
@@ -53,20 +53,36 @@ for column in X.columns:
 # Apply Min-Max scaling
 # It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
 X[X.columns] = scaler.fit_transform(X[X.columns])
+indices_to_drop = df.index[:3]
+X = X.drop(X.index[:3])
+
 
 y = df[df.columns[1]]  # Target variable, ensure this is the correct column
+y.index = df[0]
+indices_to_drop = df.index[:3]
+y = y.drop(y.index[:3])
+y = y.iloc[::-1].reset_index(drop=False)
+yindex, y = y[0], y[1]
+y.index = yindex
+print(y.index)
+
 
 # Split data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+split_point = int(len(y) * 0.8)
+X_train, X_test = X[:split_point], X[split_point:]
+y_train, y_test = y[:split_point], y[split_point:]
 
 X_test.fillna(0, inplace=True)
 y_test.fillna(0, inplace=True)
+y_train.fillna(0, inplace=True)
+y.fillna(0, inplace=True)
 
 print("xtrain")
 print(X_train)
 
 print("xtest")
 print(X_test)
+
 
 print("ytrain")
 print(y_train)
@@ -77,7 +93,6 @@ print(y_test)
 
 # Database configuration for storing study results
 mysqldb = 'mysql+pymysql://root:Hawaii808!@localhost:3306/time_series_lightgbm_forecast'
-
 def objective(trial):
     light_param = {
         'boosting_type': 'gbdt',
@@ -99,13 +114,13 @@ def objective(trial):
     }
     model = LGBMRegressor(**light_param)
     tscv = TimeSeriesSplit(n_splits=5)
-    scorer = make_scorer(mean_squared_error, greater_is_better=False, squared=False)
-    scores = cross_val_score(model, X_train, y_train, cv=tscv, scoring=scorer)
+    mse_scorer = make_scorer(mean_squared_error, greater_is_better=False)
+    scores = cross_val_score(model, X_train, y_train, cv=tscv, scoring=mse_scorer)
     return np.nanmean(scores)
 
 # Create and optimize the study
 study = optuna.create_study(direction='minimize', study_name='Time_Series_Forecasting_JPmorg', storage=mysqldb, load_if_exists=True)
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=70)
 
 # Display best parameters
 print("Number of finished trials: ", len(study.trials))
@@ -136,9 +151,8 @@ print(predictions)
 mse = mean_squared_error(y_test, predictions)
 print(f"Mean Squared Error: {mse}")
 
-# Assuming you have 'predictions' and the actual targets 'y_test'
 plt.figure(figsize=(10, 5))
-plt.plot(y_test.index, y_test, label='Actual', color='blue')  # Make sure y_test is a pandas Series with a datetime index
+plt.plot(y_test.index, y_test, label='Actual', color='blue')  
 plt.plot(y_test.index, predictions, label='Predicted', color='red')
 plt.title('Model Predictions vs Actual Data')
 plt.xlabel('Date')
@@ -151,8 +165,7 @@ y_test_filtered = y_test
 predictions_filtered = predictions[~pd.isna(y_test)]
 errors = y_test_filtered - predictions_filtered
 
-# Plot error distribution
-plt.hist(errors, bins=30, alpha=0.5, color='g')
+plt.hist(errors.dropna(), bins=30, alpha=0.5, color='g')  # Drop NaN values to avoid errors in histogram plotting
 plt.title('Error Distribution')
 plt.xlabel('Prediction Error')
 plt.ylabel('Frequency')

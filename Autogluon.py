@@ -5,13 +5,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
 # Load your data
-
-
-# Load your data
-# data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
+df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
 df = df.T
-
 
 # Remove dollar signs and commas
 df[1] = df[1].replace('[\$,]', '', regex=True)
@@ -78,28 +73,32 @@ print(X_test)
 
 print("ytrain")
 print(y_train)
+print(len(y_train))
 
 print("ytest")
 print(y_test)
+print(len(y_test))
 
+full_train = pd.concat([X_train, y_train], axis=0)
+full_test = pd.concat([X_test, y_test], axis=0)
+full_train.columns = [str(col) for col in full_train.columns]
+full_test.columns = [str(col) for col in full_test.columns]
 
-# Prepare train_data and test_data for AutoGluon
-train_data = pd.concat([X_train, y_train.rename('target')], axis=1)
-test_data = pd.concat([X_test, y_test.rename('target')], axis=1)
+print(full_train)
 
+#start# Initialize and fit the predictor
+'''
+predictor = TabularPredictor(label = path='autogluon_forecasting_models').fit(train_data=pd.concat([X_train, y_train], axis=1))
 
-#start
-forecast_horizon = 7  # for example, forecast 7 periods ahead
-
-predictor = TabularPredictor(label='target', path='autogluon_forecasting_models').fit(train_data)
-predictions = predictor.predict(test_data.drop(columns=['target']))
-
-#eval
-mae = mean_absolute_error(test_data['target'], predictions)
-rmse = mean_squared_error(test_data['target'], predictions, squared=False)
+# Predict and evaluate
+predictions = predictor.predict(X_test)
+mae = mean_absolute_error(y_test, predictions)
+rmse = mean_squared_error(y_test, predictions, squared=False)
 
 print(f"Mean Absolute Error: {mae}")
 print(f"Root Mean Squared Error: {rmse}")
 
-predictor.save('my_model_path')  # Save model
-loaded_predictor = TabularPredictor.load('my_model_path')  # Load model
+print(f"Mean Absolute Error: {mae}")
+print(f"Root Mean Squared Error: {rmse}")
+'''
+

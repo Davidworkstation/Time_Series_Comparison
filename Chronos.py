@@ -13,10 +13,8 @@ pipeline = ChronosPipeline.from_pretrained(
     torch_dtype=torch.bfloat16,
 )
 
-
 # Load your data
-# data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
+df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
 df = df.T
 
 # Remove dollar signs and commas
@@ -84,62 +82,37 @@ print(X_test)
 
 print("ytrain")
 print(y_train)
+print(len(y_train))
 
 print("ytest")
 print(y_test)
-
-# Initialize the scaler
-scaler = MinMaxScaler()
-
-# Assuming 'X' is your DataFrame
-for column in X.columns:
-    X[column] = X[column].replace('[\$,]', '', regex=True)
-    X[column] = X[column].replace('-', pd.NA)
-    X[column] = pd.to_numeric(X[column], errors='coerce')
-    X[column].fillna(0, inplace=True)
-
-# Apply Min-Max scaling
-# It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
-X[X.columns] = scaler.fit_transform(X[X.columns])
-
-y = df[df.columns[1]]  # Target variable, ensure this is the correct column
-
-# Split data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
-
-X_test.fillna(0, inplace=True)
-y_test.fillna(0, inplace=True)
-y_train.fillna(0, inplace=True)
-
-print("xtest")
-print(y_train)
-print("Length of Time Series Training Data: ", len(y_train))
-
-print("ytest")
-print(y_test)
-print("Length of Time Series Test Data: ", len(y_test))
+print(len(y_test))
 
 # context must be either a 1D tensor, a list of 1D tensors,
 # or a left-padded 2D tensor with batch as the first dimension
 context = torch.tensor(y_train)
-prediction_length = 7
+prediction_length = len(y_test)
+n_samples = 100
 forecast = pipeline.predict(
     context,
     prediction_length,
-    num_samples=1000,
+    num_samples=n_samples,
     temperature=1.0,
     top_k=50,
     top_p=1.0,
 ) # forecast shape: [num_series, num_samples, prediction_length]
 
 # visualize the forecast
-forecast_index = np.arange(0, 7)
+forecast_index = y_test.index
 low, median, high = np.quantile(forecast[0].numpy(), [0.1, 0.5, 0.9], axis=0)
 
 plt.figure(figsize=(11, 8))
-plt.plot(y_test, color="royalblue", label="historical data")
+plt.plot(y_train, color="royalblue", label="historical data")
+plt.plot(y_test, color="#ADD8E6", label="test data")
 plt.plot(forecast_index, median, color="tomato", label="median forecast")
+plt.xlim(y_train.index.min(), y_test.index.max())
 plt.fill_between(forecast_index, low, high, color="tomato", alpha=0.3, label="80% prediction interval")
+plt.title(f"Chronos Forecast for {n_samples} Samples")
 plt.legend()
 plt.grid()
 plt.show()
