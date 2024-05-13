@@ -7,13 +7,6 @@ from pmdarima.arima.utils import ndiffs
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-import warnings
-
-warnings.filterwarnings("ignore", message="No frequency information was provided, so inferred frequency Q-DEC will be used.")
-warnings.filterwarnings("ignore", message="is_categorical_dtype is deprecated and will be removed in a future version.*")
-warnings.filterwarnings("ignore", message="use_inf_as_na option is deprecated and will be removed in a future version.*")
 
 
 # Load your data
