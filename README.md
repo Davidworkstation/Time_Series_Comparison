@@ -7,10 +7,13 @@ Several methodologies are employed for time series forecasting, ranging from tra
 Data Collection and Project Application
 The project utilizes web scraping techniques to automatically gather quarterly cash flow data from J.P. Morgan, facilitating real-time data analysis and enhancing the accuracy of forecasts. This automated data collection is crucial for maintaining an up-to-date dataset, which is essential for the accuracy of any forecasting model. By comparing the performance of traditional models like ARIMA and VAR with advanced techniques such as LightGBM and AutoGluon, as well as exploring unsupervised methods in Chronos, this project aims to identify the most efficient and accurate models for forecasting financial time series. This comparative analysis will help in understanding the strengths and limitations of each approach, guiding financial analysts in choosing the appropriate forecasting model for their specific needs.
 
-Files:
-    1. Webscrape.py - generates a csv files of JP Morgan's quarterly cash flow summaries from 2009 to 2023. Uses Selenium to open a dummy webpage to load necessary html and javascript, and performs simple browser interactions to capture the entirety of the data in jqx table format. 
-    2. VAR.py - 
-    3. ARIMA.py - 
-    4. LightGBM_Regressor.py
-    5. Autogluon.py
-    6. 
+Current Files:
+    1. requirements.txt - contains all the necessary requirements to run programs in "Current Files". Users must have the python package executable installed and a necessary editor to interpret the program. Install and use "pip install requirements.txt" to obtain all required libraries.
+    2. Webscrape.py - generates a csv files of JP Morgan's quarterly cash flow summaries from 2009 to 2023. Uses Selenium to open a dummy webpage to load necessary html and javascript, and performs simple browser interactions to capture the entirety of the data in jqx table format. Converts to pandas dataframe and outputs csv. Replace paths as necessary.
+    3. ARIMA.py - Main data loading procedure is outlined. Performs Dickey_Fuller test, and differencing to prepare data for AutoRegressive Integrated Moving Average (ARIMA) forecasting. Compares over 15 different combinations of (p,d,q) setups and compares various factor, notably RMSE, to select the best model (outlined in Time_Series_Comparison.docx/pdf).
+    4. LightGBM_Regressor.py - Performs similar data cleaning as ARIMA, but also applies minmax scaling across all feature columns. 
+    5. Time_Series_Comparison.docx and Time_Series_Comparison.docx - breif documents explaining the data extraction and forecasting processes of ARIMA, LightGBM, and Chronos.
+
+To be implemented (later; not for final project)
+    5. Autogluon.py 
+    6. VAR.py 

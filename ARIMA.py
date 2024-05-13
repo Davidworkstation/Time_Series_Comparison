@@ -1,3 +1,4 @@
+# Import Required Libraries
 from statsmodels.tsa.stattools import adfuller
 import numpy as np
 import pandas as pd
@@ -7,49 +8,35 @@ from pmdarima.arima.utils import ndiffs
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
+from sklearn.model_selection import train_test_split
+import warnings
+
+warnings.filterwarnings("ignore", message="No frequency information was provided, so inferred frequency Q-DEC will be used.")
+warnings.filterwarnings("ignore", message="is_categorical_dtype is deprecated and will be removed in a future version.*")
+warnings.filterwarnings("ignore", message="use_inf_as_na option is deprecated and will be removed in a future version.*")
 
 
-# Load your data
-# data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
-df = df.T
+# Extracts csv and converts to a dataframe. You may need to replace relative path with full path
+df = pd.read_csv(r"Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
+df = df.T #transposes data. Takes the features in column 1 (column[0]) and places them in the first row
 
+df[1] = df[1].replace('[\$,]', '', regex=True) #remove dollar signs and commas
+df[1] = df[1].replace('-', pd.NA) #replace '-' or any other placeholders for missing data with NaN
+df[1] = pd.to_numeric(df[1], errors='coerce') #converts the values to numerics in the first column, containing the target variable
+df[0] = pd.to_datetime(df[0], errors='coerce') #ensures the column with dates are of data type "datetime"
 
-# Remove dollar signs and commas
-df[1] = df[1].replace('[\$,]', '', regex=True)
-
-# Replace '-' or any other placeholders for missing data with NaN
-df[1] = df[1].replace('-', pd.NA)
-
-df[1] = pd.to_numeric(df[1], errors='coerce')
-
-df[0] = pd.to_datetime(df[0], errors='coerce')
-
-time_series_data = pd.DataFrame({
-    "Dates":df[0],
-    "Values":df[1]
-})
-
-#split data
 # Split data for features and target
-X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
+X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  #now X is a dataframe of only features, without the dates or target variables
 
-# Initialize the scaler
-scaler = MinMaxScaler()
-
-# Assuming 'X' is your DataFrame
 for column in X.columns:
     X[column] = X[column].replace('[\$,]', '', regex=True)
     X[column] = X[column].replace('-', pd.NA)
     X[column] = pd.to_numeric(X[column], errors='coerce')
     X[column].fillna(0, inplace=True)
 
-# Apply Min-Max scaling
 # It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
-X[X.columns] = scaler.fit_transform(X[X.columns])
 indices_to_drop = df.index[:3]
 X = X.drop(X.index[:3])
-
 
 y = df[df.columns[1]]  # Target variable, ensure this is the correct column
 y.index = df[0]
@@ -62,7 +49,7 @@ print(y.index)
 
 
 # Split data into training and test sets
-split_point = int(len(y) * 0.8)
+split_point = int(len(y) * 0.8) 
 X_train, X_test = X[:split_point], X[split_point:]
 y_train, y_test = y[:split_point], y[split_point:]
 
