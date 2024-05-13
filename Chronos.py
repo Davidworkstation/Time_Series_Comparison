@@ -6,6 +6,7 @@ import plotly.express as px
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 
 pipeline = ChronosPipeline.from_pretrained(
     "amazon/chronos-t5-base",
@@ -92,7 +93,7 @@ print(len(y_test))
 # or a left-padded 2D tensor with batch as the first dimension
 context = torch.tensor(y_train)
 prediction_length = len(y_test)
-n_samples = 100
+n_samples = 10
 forecast = pipeline.predict(
     context,
     prediction_length,
@@ -117,3 +118,6 @@ plt.legend()
 plt.grid()
 plt.show()
 
+# Calculate RMSE between the median forecast and the actual test data
+rmse = np.sqrt(mean_squared_error(y_test, median))
+print(f"Root Mean Squared Error: {rmse}")
