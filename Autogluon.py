@@ -4,9 +4,10 @@ import pandas as pd
 
 # Load your data
 
+
 # Load your data
 # data = pd.read_csv('your_data.csv')
-df = pd.read_csv(r"C:\Users\David\OneDrive\Desktop\repos\Time_Series_Comparison\JPcashflow.csv")
+df = pd.read_csv(r"/Users/risaiah/Desktop/GitHub Repositories/Time_Series_Cash_Flows/Time_Series_Comparison/JPcashflow.csv")
 df = df.T
 
 
@@ -25,7 +26,6 @@ time_series_data = pd.DataFrame({
     "Values":df[1]
 })
 
-
 #split data
 # Split data for features and target
 X = df.drop(columns=[df.columns[0], df.columns[1], df.columns[2]])  # Features
@@ -43,20 +43,36 @@ for column in X.columns:
 # Apply Min-Max scaling
 # It's important to drop any NaN values before fitting the scaler as it cannot handle NaNs
 X[X.columns] = scaler.fit_transform(X[X.columns])
+indices_to_drop = df.index[:3]
+X = X.drop(X.index[:3])
+
 
 y = df[df.columns[1]]  # Target variable, ensure this is the correct column
+y.index = df[0]
+indices_to_drop = df.index[:3]
+y = y.drop(y.index[:3])
+y = y.iloc[::-1].reset_index(drop=False)
+yindex, y = y[0], y[1]
+y.index = yindex
+print(y.index)
+
 
 # Split data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+split_point = int(len(y) * 0.8)
+X_train, X_test = X[:split_point], X[split_point:]
+y_train, y_test = y[:split_point], y[split_point:]
 
 X_test.fillna(0, inplace=True)
 y_test.fillna(0, inplace=True)
+y_train.fillna(0, inplace=True)
+y.fillna(0, inplace=True)
 
 print("xtrain")
 print(X_train)
 
 print("xtest")
 print(X_test)
+
 
 print("ytrain")
 print(y_train)
